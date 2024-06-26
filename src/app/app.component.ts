@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import {map} from 'rxjs/operators';
 import {Post} from "./post.model";
+import {PostsService} from "./posts.service";
 
 
 @Component({
@@ -11,41 +12,36 @@ import {Post} from "./post.model";
 })
 
 export class AppComponent implements OnInit {
-  loadedPosts = [];
 
-  constructor(private http: HttpClient) {}
+  loadedPosts: Post[] = [];
+  isFetching = false;
+
+  constructor(private http: HttpClient, private postsService: PostsService) {}
 
   ngOnInit() {
-    this.fetchPosts();
+    this.isFetching = true;
+    this.postsService.fetchPosts().subscribe(posts => {
+      this.isFetching = false;
+      this.loadedPosts = posts;
+    });
   }
 
-  onCreatePost(postData: { title: string; content: string }) {
-    this.http
-      .post<{ name: string }>('https://first-project-c5fcf-default-rtdb.europe-west1.firebasedatabase.app/posts.json', postData)
-       .subscribe(responseData =>{console.log(responseData)});
+  onCreatePost(postData: Post) {
+    this.postsService.createAndStorePost(postData.title, postData.content)
   }
 
   onFetchPosts() {
-    this.fetchPosts();
+    this.isFetching = true;
+    this.postsService.fetchPosts().subscribe(posts => {
+      this.isFetching = false;
+      this.loadedPosts = posts;
+    });
   }
 
-  onClearPosts(postData: Post) {
+  onClearPosts() {
+    this.postsService.deletePosts().subscribe(() => {
+      this.loadedPosts = [];
+    });
   }
 
-  private fetchPosts(){
-    this.http.get<{[key: string]: Post}>('https://first-project-c5fcf-default-rtdb.europe-west1.firebasedatabase.app/posts.json')
-      .pipe(
-        map(responseData  => {
-        const postsArray: Post[] = [];
-        for (const key in responseData){
-          if (responseData.hasOwnProperty(key)){
-            postsArray.push({...responseData[key], id: key});
-          }
-        }
-        return postsArray;
-      })
-      ).subscribe(posts => {
-        console.log(posts);
-      });
-  }
 }
